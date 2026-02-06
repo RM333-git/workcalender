@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>分担カレンダー</title>
+  <style>
+    .calendar {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;     /* ← これを追加！ */
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      vertical-align: top;
+      width: 14.2857%;              /* 任意だが明示するとより安定 */
+      height: 100px/* !important*/;     これを最優先で
+      min-height: 100px/* !important*/;
+      max-height: 100px/* !important*/; /* 念のため */
+      overflow: hidden;             /* はみ出しを強制的に隠す */
+      box-sizing: border-box;
+    }
+/*    tbody tr {
+      height: 100px !important;
+      max-height: 100px !important;
+    }*/
+    th {
+      height: 30px;   /* ← これでヘッダーだけ小さく強制 */
+      min-height: 30px;
+      max-height: 30px;
+      padding: 4px 0;
+      line-height: 1.4;
+      background: #f0f4f8;
+      color: #444;
+      font-weight: bold;
+    }
+
+    .sunday    { color: #d32f2f; }
+    .saturday  { color: #1976d2; }
+
+    .day-number {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+      text-align: right;
+      opacity: 0.8;
+    }
+
+    .other-month {
+      opacity: 0.4;
+      background: #fafafa;
+    }
+
+    .event {
+      margin: 4px 0;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      text-align: left;
+      white-space: nowrap;                /* 横に伸びないように維持 */
+      overflow: hidden;                   /* はみ出しを隠す */
+      text-overflow: ellipsis;            /* … で省略 */
+      max-width: 100%;                    /* 親の幅を超えない */
+      box-sizing: border-box;
+    }
+
+    .event-list {
+      height: 52px;            /* ← これを固定に */
+      min-height: 52px;
+      max-height: 52px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      text-align: left;
+      padding: 2px 4px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="calendar">
+  <div class="header">
+    <button onclick="prevMonth()">前月</button>
+    <h1 id="monthTitle">xxxx年 x月</h1>
+    <button onclick="nextMonth()">翌月</button>
+  </div>
+
+  <table id="calendarTable">
+    <thead>
+      <tr>
+        <th class="sunday">日</th>
+        <th>月</th>
+        <th>火</th>
+        <th>水</th>
+        <th>木</th>
+        <th>金</th>
+        <th class="saturday">土</th>
+      </tr>
+    </thead>
+    <tbody id="calendarBody"></tbody>
+  </table>
+  <button onclick="switchAndSaveToLocalStorage()">switch</button>
+</div>
+
+<script>
+// ───────────── データ ─────────────
+
+const member = ["え", "つ", "み"];
+const memStyle = {"え": { text: "え", bg: "#63f2ff", color: "#000000" },
+                  "つ": { text: "つ", bg: "#fc9a77", color: "#000000" },
+                  "み": { text: "み", bg: "#00c91e", color: "#000000" }};
+
+
+// 今月の年月を自動で取得
+const today = new Date();
+let currentYear  = today.getFullYear();
+let currentMonth = today.getMonth();  // 0=1月, 1=2月, ..., 11=12月
+
+// localStorage からデータを読み込む（なければ空のオブジェクト）
+let initData = {"swi" : 0};  // 初期化
+var savedData = initData;  // 初期化
+const savedRaw = localStorage.getItem('divisionCalendar');
+if (savedRaw) {
+  try {
+    savedData = JSON.parse(savedRaw);
+  } catch (e) {
+    console.error('localStorageのデータが壊れています', e);
+    savedData = initData; // 壊れていたら初期化
+  }
+}
+// データを保存する関数
+function switchAndSaveToLocalStorage() {
+  savedData["swi"] = savedData["swi"] == 0 ? 1 : 0;
+  localStorage.setItem('divisionCalendar', JSON.stringify(savedData));
+  events = {};
+  renderCalendar();
+}
+
+// 予定データ（キー: "YYYY-MM-DD"）
+var events = {
+  // "2026-02-03": [
+  //   { text: "歯医者", bg: "#ffebee", color: "#c62828" },
+  //   { text: "友達とご飯", bg: "#e8f5e9", color: "#2e7d32" },
+  //   { text: "友達とご飯2", bg: "#e8f5e9", color: "#2e7d32" }
+  // ],
+  // "2026-02-14": [
+  //   { text: "バレンタイン", bg: "#fce4ec", color: "#c2185b" }
+  // ],
+  // "2026-02-23": [
+  //   { text: "天皇誕生日", bg: "#fff3e0", color: "#ef6c00" }
+  // ]
+};
+
+// ───────────── 描画 ─────────────
+function renderCalendar() {
+  const tbody = document.getElementById("calendarBody");
+  const title  = document.getElementById("monthTitle");
+
+  let curMonMenId = currentMonth%3;
+  var mem = member[curMonMenId];                               // memberの順番
+  title.textContent = `${currentYear}年 ${currentMonth + 1}月 (${mem})`;
+
+  tbody.innerHTML = "";
+
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay  = new Date(currentYear, currentMonth + 1, 0);
+
+  const startWeekday = firstDay.getDay();     // 0=日曜
+  const daysInMonth  = lastDay.getDate();
+
+  let date = 1;
+  let row = null;
+
+  var baseDt = new Date(2026,0,1,0,0);  // 2026/1/1をswi=0（偶数に）
+  var detDays = Math.abs(firstDay.getTime()-baseDt.getTime())/(24 * 60 * 60 * 1000);
+  var swi = (detDays+savedData["swi"])%2;
+  // console.log("fd:"+firstDay.getTime()+" bd:"+baseDt.getTime()+" detDays:"+detDays+" swi:"+swi);
+
+  for (let i = 0; i < 6; i++) {   // 最大6週
+    row = document.createElement("tr");
+
+    for (let j = 0; j < 7; j++) {
+      const cell = document.createElement("td");
+
+      // 前月・翌月の日付
+      if (i === 0 && j < startWeekday || date > daysInMonth) {
+        cell.classList.add("other-month");
+        cell.innerHTML = date > daysInMonth 
+          ? "" 
+          : `<div class="day-number"></div>`;
+      } else {
+        const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
+
+        if(j!=0 && j!=6){
+          events[dateStr] = events[dateStr] || [];
+          var notExist = true;
+          for(var k=0;k<events[dateStr].length;k++){
+            if((events[dateStr][k].text=="渡")||(events[dateStr][k].text=="半")){     // ここも修正が必要か
+              notExist = false;
+            }
+          }
+          if(notExist && swi == 0){
+            if(curMonMenId==0){
+              events[dateStr].push(memStyle["つ"]);
+            }else if(curMonMenId==1){
+              events[dateStr].push(memStyle["み"]);
+            }else if(curMonMenId==2){
+              events[dateStr].push(memStyle["つ"]);
+            }
+            events[dateStr].push({ text: "半", bg: "#fff0f0", color: "#000000" });
+          }else if(notExist && swi == 1){
+            if(curMonMenId==0){
+              events[dateStr].push(memStyle["み"]);
+            }else if(curMonMenId==1){
+              events[dateStr].push(memStyle["え"]);
+            }else if(curMonMenId==2){
+              events[dateStr].push(memStyle["え"]);
+            }
+            events[dateStr].push({ text: "渡", bg: "#f0f5f9", color: "#000000" });
+          }
+        }
+        
+        cell.innerHTML = `<div class="day-number">${date}</div>`;
+        cell.dataset.date = dateStr;
+
+        // 予定を表示
+        if (events[dateStr] && events[dateStr].length > 0) {
+          const eventList = document.createElement("div");
+          eventList.className = "event-list";
+
+          events[dateStr].forEach(ev => {
+            const div = document.createElement("div");
+            div.className = "event";
+            div.textContent = ev.text;
+            div.style.backgroundColor = ev.bg   || "#e3f2fd";
+            div.style.color          = ev.color || "#1565c0";
+            eventList.appendChild(div);
+          });
+
+          cell.appendChild(eventList);
+        }
+
+        // 今日なら目立つ（オプション）
+        if (date === new Date().getDate() &&
+            currentMonth === new Date().getMonth() &&
+            currentYear === new Date().getFullYear()) {
+          cell.style.background = "#fffde7";
+          cell.style.fontWeight = "bold";
+        }
+
+        swi = (swi+1)%2;
+        date++;
+      }
+
+      // 曜日クラス
+      if (j === 0) cell.classList.add("sunday");
+      if (j === 6) cell.classList.add("saturday");
+
+      row.appendChild(cell);
+    }
+
+    tbody.appendChild(row);
+
+    // 月の最終日を超えたら終了
+    if (date > daysInMonth) break;
+  }
+
+  tbody.innerHTML += `now switch: ${savedData["swi"]}`;
+
+}
+
+// ───────────── 月移動 ─────────────
+function prevMonth() {
+  currentMonth--;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  renderCalendar();
+}
+
+function nextMonth() {
+  currentMonth++;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  renderCalendar();
+}
+
+// 初回描画
+renderCalendar();
+</script>
+
+</body>
+</html>
