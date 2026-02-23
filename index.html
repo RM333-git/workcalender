@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>分担カレンダー</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .calendar {
       font-family: system-ui, sans-serif;
@@ -318,6 +319,21 @@ function nextMonth() {
 
 // 初回描画
 renderCalendar();
+
+    // 1. 初期化
+    const supabaseUrl = 'https://wxopsmqkcjhdyouqjsvq.supabase.co'
+    const supabaseKey = 'sb_publishable_-4wQNjS35p4-CHALa7tMCw_MQimNs6s' // ここはanonキーなら公開してOK
+    const db = supabase.createClient(supabaseUrl, supabaseKey)
+
+    // 2. インクリメント処理
+    async function increment() {
+      const { error } = await db.rpc('increment_counter', { row_id: 1 })
+      if (error) console.error(error)
+      else console.log('incremented!')
+    }
+    increment();
+
+
 </script>
 
 </body>
