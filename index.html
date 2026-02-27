@@ -273,7 +273,10 @@ function renderCalendar() {
         if (date === new Date().getDate() &&
             currentMonth === new Date().getMonth() &&
             currentYear === new Date().getFullYear()) {
-          cell.style.background = "#fffde7";
+          // let [r, g, b] = "#fff424".match(/\w\w/g).map(x => parseInt(x, 16));
+          // cell.style.backgroundColor = `rgba(${r},${g},${b},0.75)`;
+          cell.style.backgroundColor = `rgba(255,255,0,0.75)`;
+          // cell.style.background = "#fffde7";
           cell.style.fontWeight = "bold";
         }
 
