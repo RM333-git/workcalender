@@ -15,18 +15,18 @@ jobs:
 
       - name: Access Supabase API
         run: |
-          curl -X POST 'https://${{ secrets.wxopsmqkcjhdyouqjsvq }}.supabase.co/rest/v1/activate_log' \
-            -H "apikey: ${{ secrets.sb_publishable_-4wQNjS35p4-CHALa7tMCw_MQimNs6s }}" \
-            -H "Authorization: Bearer ${{ secrets.sb_publishable_-4wQNjS35p4-CHALa7tMCw_MQimNs6s }}" \
+          curl -X POST 'https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co/rest/v1/activate_log' \
+            -H "apikey: ${{ secrets.SUPABASE_API_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{"comment": "activated by github actions"}'
       
       - name: Check Activation Log Count
         run: |
           RESPONSE=$(curl -s -X POST \
-            'https://${{ secrets.wxopsmqkcjhdyouqjsvq }}.supabase.co/rest/v1/rpc/count_activate_log' \
-            -H "apikey: ${{ secrets.sb_publishable_-4wQNjS35p4-CHALa7tMCw_MQimNs6s }}" \
-            -H "Authorization: Bearer ${{ secrets.sb_publishable_-4wQNjS35p4-CHALa7tMCw_MQimNs6s }}" \
+            'https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co/rest/v1/rpc/count_activate_log' \
+            -H "apikey: ${{ secrets.SUPABASE_API_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{}')
           echo "ActivateLog count: $RESPONSE"
