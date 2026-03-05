@@ -19,7 +19,7 @@ jobs:
             -H "apikey: ${{ secrets.SUPABASE_API_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d '{"comment": "activated by github actions"}'
+            -d '{"comment": "activated"}'
       
       - name: Check Activation Log Count
         run: |
