@@ -11,22 +11,10 @@ jobs:
   access-supabase-api:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Access Supabase API
+      - name: Ping Supabase with SELECT
         run: |
-          curl -X POST 'https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co/rest/v1/activate_log' \
+          curl -s -X GET \
+            'https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co/rest/v1/activate_log?select=id&limit=1' \
             -H "apikey: ${{ secrets.SUPABASE_API_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"comment": "activated"}'
-      
-      - name: Check Activation Log Count
-        run: |
-          RESPONSE=$(curl -s -X POST \
-            'https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co/rest/v1/rpc/count_activate_log' \
-            -H "apikey: ${{ secrets.SUPABASE_API_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{}')
-          echo "ActivateLog count: $RESPONSE"
+            -H "Content-Type: application/json"
